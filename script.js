@@ -90,16 +90,29 @@
     shareText = $("shareText");
 
   let view = 1;
+  let cacheDirty = true,
+    skyLayer = null,
+    glowLayer = null,
+    farTile = null,
+    nearTile = null;
+  const grads = {};
   function fit() {
     const r = stage.getBoundingClientRect();
     const s = Math.max(0.2, Math.min(r.width / W, r.height / H, 1.35));
     frameEl.style.width = W * s + "px";
     frameEl.style.height = H * s + "px";
     frameEl.style.fontSize = Math.max(13, 16 * s) + "px";
-    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-    canvas.width = Math.round(W * s * dpr);
-    canvas.height = Math.round(H * s * dpr);
-    view = (W * s * dpr) / W;
+    // cap the backing-store size: very high resolutions make every frame slow
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (s * dpr > 2) dpr = Math.max(1, 2 / s);
+    const cw = Math.round(W * s * dpr),
+      ch = Math.round(H * s * dpr);
+    if (canvas.width !== cw || canvas.height !== ch) {
+      canvas.width = cw;
+      canvas.height = ch;
+    }
+    view = cw / W;
+    cacheDirty = true;
   }
   if (window.ResizeObserver) new ResizeObserver(fit).observe(stage);
   window.addEventListener("resize", fit);
@@ -159,6 +172,7 @@
     r: 0.7 + Math.random() * 2.3,
     ph: Math.random() * 6.28,
   }));
+  flakes.forEach((fl) => (fl.a = Math.min(0.85, 0.45 + fl.r * 0.12)));
   const farRidge = {
     base: 432,
     a1: 92,
@@ -461,8 +475,7 @@
 
   function updatePlay(f) {
     // faster every STEP_EVERY trees (20, 40, 60, 80), eased in smoothly
-    const target =
-      BASE_SPEED + Math.floor(score / STEP_EVERY) * STEP_BOOST;
+    const target = BASE_SPEED + Math.floor(score / STEP_EVERY) * STEP_BOOST;
     curSpeed += (target - curSpeed) * Math.min(1, 0.04 * f);
     const speed = curSpeed;
     scroll += speed * f;
@@ -512,31 +525,88 @@
   }
 
   /* ---- drawing ---- */
-  function drawSky() {
-    const g = ctx.createLinearGradient(0, 0, 0, GROUND);
-    g.addColorStop(0, C["--sky-hi"]);
-    g.addColorStop(0.55, C["--sky-mid"]);
-    g.addColorStop(1, C["--sky-low"]);
-    ctx.fillStyle = g;
-    ctx.fillRect(-10, -10, W + 20, H + 20);
+  /* ---- cached layers: static scenery is drawn once, then just blitted ---- */
+  function makeLayer(w, h, draw) {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(w * view));
+    c.height = Math.max(1, Math.round(h * view));
+    const g = c.getContext("2d");
+    g.scale(c.width / w, c.height / h);
+    draw(g);
+    return c;
+  }
+  function ridgeTile(p, rock, fog) {
+    const top = p.base - (p.a1 + p.a2 + p.a3);
+    // 800 is the pattern period; 4 extra px let neighbouring tiles overlap (no seam)
+    return {
+      top,
+      img: makeLayer(804, GROUND - top, (g) => {
+        g.translate(0, -top);
+        const gr = g.createLinearGradient(0, top, 0, GROUND);
+        gr.addColorStop(0, C["--snow"]);
+        gr.addColorStop(0.2, C["--snow"]);
+        gr.addColorStop(0.27, C["--snow-shade"]);
+        gr.addColorStop(0.36, rock);
+        gr.addColorStop(1, fog);
+        g.fillStyle = gr;
+        g.beginPath();
+        g.moveTo(0, GROUND);
+        for (let x = 0; x <= 804; x += 4) g.lineTo(x, ridgeY(x, p));
+        g.lineTo(804, GROUND);
+        g.closePath();
+        g.fill();
+      }),
+    };
+  }
+  function buildCaches() {
+    cacheDirty = false;
+    skyLayer = makeLayer(W + 20, H + 20, (g) => {
+      g.translate(10, 10);
+      const gr = g.createLinearGradient(0, 0, 0, GROUND);
+      gr.addColorStop(0, C["--sky-hi"]);
+      gr.addColorStop(0.55, C["--sky-mid"]);
+      gr.addColorStop(1, C["--sky-low"]);
+      g.fillStyle = gr;
+      g.fillRect(-10, -10, W + 20, H + 20);
+    });
+    glowLayer = makeLayer(W, 320, (g) => {
+      g.translate(0, -240);
+      const gl = g.createRadialGradient(320, 470, 0, 320, 470, 230);
+      gl.addColorStop(0, rgba(C["--sky-low"], 0.5));
+      gl.addColorStop(1, rgba(C["--sky-low"], 0));
+      g.fillStyle = gl;
+      g.fillRect(0, 240, W, 320);
+    });
+    farTile = ridgeTile(farRidge, C["--rock-far"], C["--mist"]);
+    nearTile = ridgeTile(nearRidge, C["--rock-near"], C["--mist"]);
+  }
+  function vgrad(key, y0, y1, stops) {
+    let g = grads[key];
+    if (!g) {
+      g = ctx.createLinearGradient(0, y0, 0, y1);
+      for (const st of stops) g.addColorStop(st[0], st[1]);
+      grads[key] = g;
+    }
+    return g;
+  }
 
+  function drawSky() {
+    ctx.drawImage(skyLayer, -10, -10, W + 20, H + 20);
+
+    ctx.fillStyle = C["--snow"];
     for (const s of stars) {
-      const a = 0.3 + 0.3 * Math.sin(frame * 0.03 + s.p);
-      ctx.fillStyle = rgba(C["--snow"], reduce ? 0.45 : a);
+      ctx.globalAlpha = reduce ? 0.45 : 0.3 + 0.3 * Math.sin(frame * 0.03 + s.p);
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, 6.283);
       ctx.fill();
     }
+    ctx.globalAlpha = 1;
 
     const t = reduce ? 0 : frame * 0.012;
     ribbon(70, 46, 0.011, t, C["--aurora"], 0.22);
     ribbon(125, 36, 0.016, -t * 0.8 + 2, C["--aurora-2"], 0.12);
 
-    const glow = ctx.createRadialGradient(320, 470, 0, 320, 470, 230);
-    glow.addColorStop(0, rgba(C["--sky-low"], 0.5));
-    glow.addColorStop(1, rgba(C["--sky-low"], 0));
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 240, W, 320);
+    ctx.drawImage(glowLayer, 0, 240, W, 320);
   }
   function ribbon(y0, amp, k, t, color, a) {
     const pts = [];
@@ -556,11 +626,11 @@
       );
     }
     ctx.closePath();
-    const g = ctx.createLinearGradient(0, y0 - 60, 0, y0 + 170);
-    g.addColorStop(0, rgba(color, 0));
-    g.addColorStop(0.35, rgba(color, a));
-    g.addColorStop(1, rgba(color, 0));
-    ctx.fillStyle = g;
+    ctx.fillStyle = vgrad("aur" + y0, y0 - 60, y0 + 170, [
+      [0, rgba(color, 0)],
+      [0.35, rgba(color, a)],
+      [1, rgba(color, 0)],
+    ]);
     ctx.fill();
   }
 
@@ -572,21 +642,10 @@
         p.a3 * (1 - Math.abs(Math.sin((Math.PI * x) / 100 + p.ph3))))
     );
   }
-  function drawRidge(p, off, rock, fog) {
-    const top = p.base - (p.a1 + p.a2 + p.a3);
-    const g = ctx.createLinearGradient(0, top, 0, GROUND);
-    g.addColorStop(0, C["--snow"]);
-    g.addColorStop(0.2, C["--snow"]);
-    g.addColorStop(0.27, C["--snow-shade"]);
-    g.addColorStop(0.36, rock);
-    g.addColorStop(1, fog);
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.moveTo(-10, GROUND);
-    for (let x = -10; x <= W + 10; x += 4) ctx.lineTo(x, ridgeY(x + off, p));
-    ctx.lineTo(W + 10, GROUND);
-    ctx.closePath();
-    ctx.fill();
+  function drawRidge(tile, off) {
+    const h = GROUND - tile.top;
+    ctx.drawImage(tile.img, -off, tile.top, 804, h);
+    ctx.drawImage(tile.img, 800 - off, tile.top, 804, h);
   }
   function fir(x, by, h, w) {
     const Rr = [
@@ -690,10 +749,10 @@
     ctx.closePath();
     ctx.fill();
 
-    const g = ctx.createLinearGradient(0, GROUND, 0, H);
-    g.addColorStop(0, rgba(C["--snow-shade"], 0));
-    g.addColorStop(1, rgba(C["--snow-shade"], 0.9));
-    ctx.fillStyle = g;
+    ctx.fillStyle = vgrad("gshade", GROUND, H, [
+      [0, rgba(C["--snow-shade"], 0)],
+      [1, rgba(C["--snow-shade"], 0.9)],
+    ]);
     ctx.fillRect(-10, GROUND, W + 20, H - GROUND + 10);
 
     ctx.fillStyle = rgba(C["--snow"], 0.7);
@@ -734,12 +793,14 @@
   }
 
   function drawFlakes() {
+    ctx.fillStyle = C["--snow"];
     for (const fl of flakes) {
-      ctx.fillStyle = rgba(C["--snow"], Math.min(0.85, 0.45 + fl.r * 0.12));
+      ctx.globalAlpha = fl.a;
       ctx.beginPath();
       ctx.arc(fl.x, fl.y, fl.r, 0, 6.283);
       ctx.fill();
     }
+    ctx.globalAlpha = 1;
   }
   function drawParticles() {
     for (const p of particles) {
@@ -903,6 +964,7 @@
   }
 
   function render() {
+    if (cacheDirty) buildCaches();
     ctx.setTransform(view, 0, 0, view, 0, 0);
     ctx.clearRect(0, 0, W, H);
     ctx.save();
@@ -913,12 +975,12 @@
       );
 
     drawSky();
-    drawRidge(farRidge, (scroll * 0.08) % 800, C["--rock-far"], C["--mist"]);
-    drawRidge(nearRidge, (scroll * 0.2) % 800, C["--rock-near"], C["--mist"]);
-    const mist = ctx.createLinearGradient(0, 420, 0, GROUND);
-    mist.addColorStop(0, rgba(C["--mist"], 0));
-    mist.addColorStop(1, rgba(C["--mist"], 0.6));
-    ctx.fillStyle = mist;
+    drawRidge(farTile, (scroll * 0.08) % 800);
+    drawRidge(nearTile, (scroll * 0.2) % 800);
+    ctx.fillStyle = vgrad("mist", 420, GROUND, [
+      [0, rgba(C["--mist"], 0)],
+      [1, rgba(C["--mist"], 0.6)],
+    ]);
     ctx.fillRect(-10, 420, W + 20, GROUND - 420);
     drawFarForest((scroll * 0.5) % 800);
     drawTrees();
