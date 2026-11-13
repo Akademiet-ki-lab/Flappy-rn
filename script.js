@@ -19,7 +19,7 @@
     KEY_XP = "orneflukt-xp",
     KEY_SKIN = "orneflukt-skin";
   const MAX_XP = 200, // max level; level = total XP
-    TREES_PER_XP = 3; // 1 XP for every 3rd tree
+    TREES_PER_XP = 10; // 1 XP for every 10th tree
   const reduce = !!(
     window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches
   );
