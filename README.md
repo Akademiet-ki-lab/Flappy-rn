@@ -52,3 +52,5 @@ Fargene ligger som variabler øverst i `style.css`, og spillet leser dem derfra.
 ## Teknisk
 
 Ren HTML, CSS og JavaScript med Canvas. Ingen biblioteker og ingen byggesteg. Spillet skalerer til skjermen og fungerer med mus, tastatur og berøring.
+
+Lykke til med spillingen!
