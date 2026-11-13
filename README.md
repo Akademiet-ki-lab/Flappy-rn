@@ -45,7 +45,7 @@ Knappen «Del score» kopierer en ferdig tekst til utklippstavlen. Hvis nettlese
 | `FLAP`                | -6.9      | Kraften i hvert vingeslag                    |
 | `GOAL`                | 100       | Antall trær du må passere for å vinne        |
 
-Hvor mye høyden på åpningen kan hoppe fra ett tre til neste, styres av tallet 230 i funksjonen `makeTree`. Farten øker svakt opp mot 100 poeng (se `updatePlay`).
+Hvor mye høyden på åpningen kan hoppe fra ett tre til neste, styres av tallet 230 i funksjonen `makeTree`. Farten øker i trinn: for hver 20. tre (20, 40, 60, 80) går ørnen raskere (`STEP_EVERY` og `STEP_BOOST`, startfart `BASE_SPEED`). Se `updatePlay`.
 
 Fargene ligger som variabler øverst i `style.css`, og spillet leser dem derfra.
 

@@ -7,7 +7,10 @@
   const GAP_MIN = 126,
     GAP_MAX = 146,
     SPACING = 215,
-    GOAL = 100;
+    GOAL = 100,
+    BASE_SPEED = 2.4,
+    STEP_EVERY = 20,
+    STEP_BOOST = 0.4;
   const GRAV = 0.38,
     FLAP = -6.9,
     MAXFALL = 9.5,
@@ -119,7 +122,8 @@
   let score = 0,
     best = 0;
   let scroll = 0,
-    frame = 0;
+    frame = 0,
+    curSpeed = BASE_SPEED;
   let trees = [],
     particles = [];
   let shake = 0,
@@ -245,6 +249,7 @@
     eagle.alpha = 1;
     eagle.energy = 0;
     lastGapTop = 170;
+    curSpeed = BASE_SPEED;
     winT = 0;
     winHold = 0;
     landedT = 0;
@@ -455,7 +460,11 @@
   }
 
   function updatePlay(f) {
-    const speed = 2.4 + Math.min(score, GOAL) * 0.005;
+    // faster every STEP_EVERY trees (20, 40, 60, 80), eased in smoothly
+    const target =
+      BASE_SPEED + Math.floor(score / STEP_EVERY) * STEP_BOOST;
+    curSpeed += (target - curSpeed) * Math.min(1, 0.04 * f);
+    const speed = curSpeed;
     scroll += speed * f;
     eagle.vy = Math.min(eagle.vy + GRAV * f, MAXFALL);
     eagle.y += eagle.vy * f;
