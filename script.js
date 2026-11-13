@@ -20,7 +20,7 @@
     KEY_SKIN = "orneflukt-skin";
   const MAX_XP = 200, // max level; level = total XP
     TREES_PER_XP = 10, // 1 XP for every 10th tree
-    FEATHER_XP = 40, // level where the golden feather is unlocked
+    FEATHER_AT = 40, // a golden feather appears after this many trees in a run
     INVULN = 75; // frames of protection after the feather is used
   const reduce = !!(
     window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -99,32 +99,74 @@
     {
       name: "Kongeørn",
       xp: 20,
-      c: { eagle: "#8a5a22", dark: "#4a2f10", belly: "#c89a52", head: "#e8b84a", tail: "#f0e6c8", beak: "#f2b632" },
+      c: {
+        eagle: "#8a5a22",
+        dark: "#4a2f10",
+        belly: "#c89a52",
+        head: "#e8b84a",
+        tail: "#f0e6c8",
+        beak: "#f2b632",
+      },
     },
     {
       name: "Snøørn",
       xp: 40,
-      c: { eagle: "#cfd8e3", dark: "#7d8ea3", belly: "#f2f6fa", head: "#ffffff", tail: "#ffffff", beak: "#f2a03a" },
+      c: {
+        eagle: "#cfd8e3",
+        dark: "#7d8ea3",
+        belly: "#f2f6fa",
+        head: "#ffffff",
+        tail: "#ffffff",
+        beak: "#f2a03a",
+      },
     },
     {
       name: "Nattørn",
       xp: 70,
-      c: { eagle: "#2b2f4a", dark: "#14172b", belly: "#4a5080", head: "#6c72b0", tail: "#9aa0d8", beak: "#ffd45e" },
+      c: {
+        eagle: "#2b2f4a",
+        dark: "#14172b",
+        belly: "#4a5080",
+        head: "#6c72b0",
+        tail: "#9aa0d8",
+        beak: "#ffd45e",
+      },
     },
     {
       name: "Nordlysørn",
       xp: 100,
-      c: { eagle: "#1f8f72", dark: "#0f4a40", belly: "#7dffc0", head: "#c58bff", tail: "#7dffc0", beak: "#fff2a8" },
+      c: {
+        eagle: "#1f8f72",
+        dark: "#0f4a40",
+        belly: "#7dffc0",
+        head: "#c58bff",
+        tail: "#7dffc0",
+        beak: "#fff2a8",
+      },
     },
     {
       name: "Ildørn",
       xp: 140,
-      c: { eagle: "#b8321f", dark: "#5c1209", belly: "#ff9a3c", head: "#ffd27a", tail: "#ff7a2e", beak: "#ffe14d" },
+      c: {
+        eagle: "#b8321f",
+        dark: "#5c1209",
+        belly: "#ff9a3c",
+        head: "#ffd27a",
+        tail: "#ff7a2e",
+        beak: "#ffe14d",
+      },
     },
     {
       name: "Gullørn",
       xp: 200,
-      c: { eagle: "#d4a017", dark: "#7a5a05", belly: "#fff0a0", head: "#fff7c8", tail: "#ffffff", beak: "#ff7a1a" },
+      c: {
+        eagle: "#d4a017",
+        dark: "#7a5a05",
+        belly: "#fff0a0",
+        head: "#fff7c8",
+        tail: "#ffffff",
+        beak: "#ff7a1a",
+      },
     },
   ];
 
@@ -220,7 +262,10 @@
     skinIdx = 0, // skin shown in the menu
     runXp = 0,
     runUnlocked = [];
-  let feather = false, // golden feather active in this run
+  let featherDue = false, // spawn the pickup on the next tree
+    featherSpawned = false,
+    toast = 0, // frames left of the "feather picked up" message
+    feather = false, // golden feather active in this run
     invuln = 0,
     bestBeaten = false;
 
@@ -268,9 +313,7 @@
     const sk = SKINS[skinIdx];
     recordEl.textContent = "Din rekord er " + best + " av " + GOAL + " trær";
     featherInfo.textContent =
-      xp >= FEATHER_XP
-        ? "Gullfjær aktiv: du tåler ett tretreff per runde"
-        : "Gullfjær ved level " + FEATHER_XP + ": tåler ett tretreff";
+      "Nå " + FEATHER_AT + " trær: plukk gullfjæren, så tåler du ett tretreff";
     lvlEl.textContent = "Level " + xp + " av " + MAX_XP;
     const nextI = SKINS.findIndex((x) => x.xp > xp);
     let from = 0,
@@ -286,7 +329,10 @@
     skinInfo.textContent = isUnlocked(skinIdx)
       ? skinIdx === equipped
         ? nextI >= 0
-          ? "Neste skinn: " + SKINS[nextI].name + " ved level " + SKINS[nextI].xp
+          ? "Neste skinn: " +
+            SKINS[nextI].name +
+            " ved level " +
+            SKINS[nextI].xp
           : "Alle skins er låst opp"
         : sk.name
       : "Låses opp ved level " + sk.xp;
@@ -426,7 +472,10 @@
     runXp = 0;
     runUnlocked = [];
     bestBeaten = false;
-    feather = xp >= FEATHER_XP;
+    feather = false;
+    featherDue = false;
+    featherSpawned = false;
+    toast = 0;
     invuln = 0;
     state = "play";
     intro.hidden = true;
@@ -480,7 +529,7 @@
           ". tre.";
     if (xp >= MAX_XP) xpText = "Maks level (" + MAX_XP + ")! " + xpText;
     if (runUnlocked.length)
-      xpText += " Nytt skin: " + runUnlocked.join(", ") + "!";
+      xpText += " Låst opp: " + runUnlocked.join(", ") + "!";
     endXp.textContent = xpText;
     shareMsg.textContent = "";
     shareOut.hidden = true;
@@ -670,6 +719,7 @@
         score++;
         scorePop = 1;
         if (score % TREES_PER_XP === 0) gainXp();
+        if (score === FEATHER_AT && !featherSpawned) featherDue = true;
         if (score >= GOAL) {
           won = true;
           break;
@@ -680,6 +730,29 @@
       win();
       return;
     }
+
+    // golden feather: put it in the gap of the furthest tree, ahead of the eagle
+    if (featherDue) {
+      const ahead = trees[trees.length - 1];
+      if (ahead && !ahead.scored) {
+        ahead.feather = true;
+        featherDue = false;
+        featherSpawned = true;
+      }
+    }
+    for (const t of trees) {
+      if (!t.feather) continue;
+      const fy = (t.gapTop + t.gapBottom) / 2;
+      if (Math.hypot(t.x - eagle.x, fy - eagle.y) < 34) {
+        t.feather = false;
+        feather = true;
+        toast = 150;
+        puff(t.x, fy, 14, "#f5c542", 1.4, 0.03);
+        puff(t.x, fy, 8, "#fff3b0", 1.2, 0.03);
+        if (!reduce) flash = 0.25;
+      }
+    }
+    if (toast > 0) toast = Math.max(0, toast - f);
 
     if (eagle.y + R >= GROUND - 2) {
       die();
@@ -780,7 +853,9 @@
 
     ctx.fillStyle = C["--snow"];
     for (const s of stars) {
-      ctx.globalAlpha = reduce ? 0.45 : 0.3 + 0.3 * Math.sin(frame * 0.03 + s.p);
+      ctx.globalAlpha = reduce
+        ? 0.45
+        : 0.3 + 0.3 * Math.sin(frame * 0.03 + s.p);
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, 6.283);
       ctx.fill();
@@ -909,6 +984,20 @@
   function drawTrees() {
     for (const t of trees) {
       if (t.x < -90 || t.x > W + 90) continue;
+      if (t.feather) {
+        const fy = (t.gapTop + t.gapBottom) / 2 + Math.sin(frame * 0.08) * 5;
+        const gl = ctx.createRadialGradient(t.x, fy, 2, t.x, fy, 30);
+        gl.addColorStop(
+          0,
+          "rgba(255,214,90," + (0.55 + 0.25 * Math.sin(frame * 0.12)) + ")",
+        );
+        gl.addColorStop(1, "rgba(255,214,90,0)");
+        ctx.fillStyle = gl;
+        ctx.beginPath();
+        ctx.arc(t.x, fy, 30, 0, 6.283);
+        ctx.fill();
+        drawFeather(t.x, fy, 1.5);
+      }
       spruce(t.x, t.gapBottom, GROUND + 8, t.wB, true);
       ctx.save();
       ctx.scale(1, -1);
@@ -1041,6 +1130,17 @@
     ctx.translate(e.x, e.y);
     ctx.rotate(e.rot);
     ctx.scale(e.scale, e.scale);
+    if (feather && state === "play") {
+      // golden aura while the feather is active
+      const pulse = 0.5 + 0.5 * Math.sin(frame * 0.12);
+      const aura = ctx.createRadialGradient(0, 0, 4, 0, 0, 42);
+      aura.addColorStop(0, "rgba(255,214,90," + (0.35 + 0.2 * pulse) + ")");
+      aura.addColorStop(1, "rgba(255,214,90,0)");
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(0, 0, 42, 0, 6.283);
+      ctx.fill();
+    }
     ctx.globalAlpha =
       invuln > 0 && Math.floor(frame / 4) % 2 ? e.alpha * 0.4 : e.alpha;
 
@@ -1155,7 +1255,34 @@
 
   function drawScore() {
     if (state === "ready") return;
-    if (feather && state === "play") drawFeather(W / 2, 126, 0.9);
+    if (toast > 0 && state === "play") {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, toast / 30);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      ctx.font = '800 16px "Nunito Sans", system-ui, sans-serif';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = rgba(C["--night"], 0.7);
+      ctx.strokeText("Gullfjær! Du tåler ett tretreff", W / 2, 190);
+      ctx.fillStyle = "#f5c542";
+      ctx.fillText("Gullfjær! Du tåler ett tretreff", W / 2, 190);
+      ctx.restore();
+    }
+    if (feather && state === "play") {
+      drawFeather(W / 2 - 38, 142, 1.3);
+      ctx.save();
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      ctx.font = '800 14px "Nunito Sans", system-ui, sans-serif';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = rgba(C["--night"], 0.6);
+      ctx.strokeText("Gullfjær", W / 2 - 20, 142);
+      ctx.fillStyle = "#f5c542";
+      ctx.fillText("Gullfjær", W / 2 - 20, 142);
+      ctx.restore();
+    }
     const s = 1 + 0.3 * scorePop;
     ctx.save();
     ctx.translate(W / 2, 84);

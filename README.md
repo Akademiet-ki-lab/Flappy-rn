@@ -17,7 +17,7 @@ Et Flappy Bird-inspirert spill der en norsk havørn flyr gjennom snødekt gransk
 
 ## Gullfjær
 
-Fra level 40 starter du hver runde med en gullfjær. Den lar deg treffe ett tre uten å dø: fjæren brukes opp, og ørnen er beskyttet (blinker) en liten stund så den kommer seg ut av treet. Treffer du et tre til, eller bakken, er spillet over. Fjæren vises under scoren mens den er aktiv.
+Når du har passert 40 trær i en runde, dukker det opp en gullfjær midt i åpningen mellom to trær. Flyr du borti den, kan du treffe ett tre uten å dø. Fjæren brukes opp, og ørnen blinker en liten stund så den kommer seg ut av treet. Treffer du et tre til, eller bakken, er spillet over. Mens fjæren er aktiv, står det «Gullfjær» under scoren, og ørnen har en gylden glød. Fjæren kommer én gang per runde (`FEATHER_AT`).
 
 ## Rekord
 
