@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Ørneflukt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fjalla+One&family=Nunito+Sans:wght@400;700;800&display=swap"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="stage" id="stage">
+      <div class="frame" id="frame">
+        <canvas
+          id="c"
+          role="img"
+          aria-label="Spillflate: en havørn flyr mellom grantrær i snø"
+        ></canvas>
+
+        <div class="intro" id="intro">
+          <div class="head">
+            <h1>Ørneflukt</h1>
+            <p>
+              Hold havørnen høyt over granskogen og fly mellom trærne uten å
+              treffe.
+            </p>
+            <p>Klarer du alle 100?</p>
+          </div>
+          <div class="tap" id="tap">Trykk for å flakse</div>
+        </div>
+
+        <div
+          class="end"
+          id="end"
+          role="dialog"
+          aria-labelledby="endTitle"
+          hidden
+        >
+          <h2 id="endTitle"></h2>
+          <div class="score">
+            <span id="endScore">0</span><small>av 100 trær</small>
+          </div>
+          <p class="best" id="endBest"></p>
+          <div class="actions">
+            <button class="btn primary" id="again" type="button">
+              Spill på nytt
+            </button>
+            <button class="btn" id="share" type="button">Del score</button>
+          </div>
+          <p class="msg" id="shareMsg" aria-live="polite"></p>
+          <p class="shareout" id="shareOut" hidden>
+            <input
+              id="shareText"
+              type="text"
+              readonly
+              aria-label="Tekst som kan kopieres"
+            />
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
