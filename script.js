@@ -19,7 +19,9 @@
     KEY_XP = "orneflukt-xp",
     KEY_SKIN = "orneflukt-skin";
   const MAX_XP = 200, // max level; level = total XP
-    TREES_PER_XP = 10; // 1 XP for every 10th tree
+    TREES_PER_XP = 10, // 1 XP for every 10th tree
+    FEATHER_XP = 40, // level where the golden feather is unlocked
+    INVULN = 75; // frames of protection after the feather is used
   const reduce = !!(
     window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches
   );
@@ -144,7 +146,9 @@
     skinNext = $("skinNext"),
     skinName = $("skinName"),
     skinInfo = $("skinInfo"),
-    endXp = $("endXp");
+    endXp = $("endXp"),
+    recordEl = $("record"),
+    featherInfo = $("featherInfo");
   const againBtn = $("again"),
     shareBtn = $("share"),
     shareMsg = $("shareMsg"),
@@ -216,6 +220,9 @@
     skinIdx = 0, // skin shown in the menu
     runXp = 0,
     runUnlocked = [];
+  let feather = false, // golden feather active in this run
+    invuln = 0,
+    bestBeaten = false;
 
   try {
     best = parseInt(localStorage.getItem(KEY), 10) || 0;
@@ -236,6 +243,13 @@
       localStorage.setItem(KEY_SKIN, String(equipped));
     } catch (e) {}
   }
+  function recordBest() {
+    if (score > best) {
+      best = score;
+      bestBeaten = true;
+      saveBest();
+    }
+  }
   const isUnlocked = (i) => SKINS[i].xp <= xp;
   function pal() {
     return isUnlocked(skinIdx) ? SKINS[skinIdx].c : LOCKED_PAL;
@@ -252,6 +266,11 @@
   }
   function updateMenu() {
     const sk = SKINS[skinIdx];
+    recordEl.textContent = "Din rekord er " + best + " av " + GOAL + " trær";
+    featherInfo.textContent =
+      xp >= FEATHER_XP
+        ? "Gullfjær aktiv: du tåler ett tretreff per runde"
+        : "Gullfjær ved level " + FEATHER_XP + ": tåler ett tretreff";
     lvlEl.textContent = "Level " + xp + " av " + MAX_XP;
     const nextI = SKINS.findIndex((x) => x.xp > xp);
     let from = 0,
@@ -406,6 +425,9 @@
     if (!isUnlocked(skinIdx)) skinIdx = equipped;
     runXp = 0;
     runUnlocked = [];
+    bestBeaten = false;
+    feather = xp >= FEATHER_XP;
+    invuln = 0;
     state = "play";
     intro.hidden = true;
     trees = [makeTree(W + 130)];
@@ -422,12 +444,15 @@
       shake = 10;
       flash = 0.5;
     }
+    feather = false;
+    recordBest();
     puff(eagle.x, eagle.y, 10, pal().head, 1.2, 0.03);
     puff(eagle.x, eagle.y, 8, pal().eagle, 1.2, 0.03);
   }
   function win() {
     state = "won";
     score = GOAL;
+    recordBest();
     winT = 0;
     winHold = 0;
     winStartY = eagle.y;
@@ -435,11 +460,7 @@
   function showEnd(kind) {
     endShown = true;
     state = kind === "won" ? "won" : "over";
-    const newBest = score > best;
-    if (newBest) {
-      best = score;
-      saveBest();
-    }
+    const newBest = bestBeaten;
     endTitle.textContent =
       kind === "won"
         ? "WOW, du er veldig flink! Men klarer du det igjen?"
@@ -664,8 +685,24 @@
       die();
       return;
     }
+    if (invuln > 0) invuln = Math.max(0, invuln - f);
     for (const t of trees) {
       if (Math.abs(t.x - eagle.x) < 90 && hitTree(t)) {
+        if (invuln > 0) continue;
+        if (feather) {
+          // the golden feather absorbs one hit
+          feather = false;
+          invuln = INVULN;
+          eagle.vy = FLAP * 0.6;
+          eagle.energy = 1;
+          if (!reduce) {
+            shake = 8;
+            flash = 0.35;
+          }
+          puff(eagle.x, eagle.y, 14, "#f5c542", 1.4, 0.03);
+          puff(eagle.x, eagle.y, 8, "#fff3b0", 1.2, 0.03);
+          continue;
+        }
         die();
         return;
       }
@@ -1004,7 +1041,8 @@
     ctx.translate(e.x, e.y);
     ctx.rotate(e.rot);
     ctx.scale(e.scale, e.scale);
-    ctx.globalAlpha = e.alpha;
+    ctx.globalAlpha =
+      invuln > 0 && Math.floor(frame / 4) % 2 ? e.alpha * 0.4 : e.alpha;
 
     let th;
     if (state === "dying") th = 1.15 + 0.25 * Math.sin(frame * 0.6);
@@ -1091,8 +1129,33 @@
     ctx.restore();
   }
 
+  function drawFeather(x, y, s) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-0.6);
+    ctx.scale(s, s);
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#8a5a00";
+    ctx.lineWidth = 1.6;
+    ctx.fillStyle = "#f5c542";
+    ctx.beginPath();
+    ctx.moveTo(0, -16);
+    ctx.quadraticCurveTo(11, -4, 0, 10);
+    ctx.quadraticCurveTo(-11, -4, 0, -16);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, -12);
+    ctx.lineTo(0, 19);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawScore() {
     if (state === "ready") return;
+    if (feather && state === "play") drawFeather(W / 2, 126, 0.9);
     const s = 1 + 0.3 * scorePop;
     ctx.save();
     ctx.translate(W / 2, 84);

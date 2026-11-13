@@ -108,10 +108,14 @@ canvas {
   line-height: 1.4;
   text-shadow: 0 1px 8px rgba(14, 32, 54, 0.85);
 }
+.intro .record {
+  font-weight: 800;
+  color: var(--aurora);
+}
 .intro .tap {
   position: absolute;
   left: 50%;
-  top: 63%;
+  top: 59%;
   transform: translateX(-50%);
   white-space: nowrap;
   font-weight: 800;
@@ -125,7 +129,7 @@ canvas {
 .skins {
   position: absolute;
   left: 50%;
-  top: 72%;
+  top: 68%;
   transform: translateX(-50%);
   width: 86%;
   padding: 0.7em 0.8em;
@@ -177,6 +181,12 @@ canvas {
 .skinname small {
   font-size: 0.8em;
   opacity: 0.9;
+}
+.feather {
+  font-size: 0.8em;
+  font-weight: 700;
+  color: #f5c542;
+  text-align: center;
 }
 .arrow {
   pointer-events: auto;

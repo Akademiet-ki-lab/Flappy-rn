@@ -15,6 +15,14 @@ Et Flappy Bird-inspirert spill der en norsk havørn flyr gjennom snødekt gransk
 - Med XP låser du opp nye skins til ørnen: Havørn (0), Kongeørn (20), Snøørn (40), Nattørn (70), Nordlysørn (100), Ildørn (140) og Gullørn (200).
 - Velg skin på startskjermen (der det står «Trykk for å flakse») med pilknappene eller venstre/høyre piltast. Låste skins vises som silhuett.
 
+## Gullfjær
+
+Fra level 40 starter du hver runde med en gullfjær. Den lar deg treffe ett tre uten å dø: fjæren brukes opp, og ørnen er beskyttet (blinker) en liten stund så den kommer seg ut av treet. Treffer du et tre til, eller bakken, er spillet over. Fjæren vises under scoren mens den er aktiv.
+
+## Rekord
+
+Startmenyen viser alltid «Din rekord er X av 100 trær», så du ser hvor nær målet du var sist. Rekorden lagres med en gang du dør eller vinner.
+
 XP, valgt skin og rekorden din lagres i nettleseren (localStorage).
 
 ## Slik kjører du det
