@@ -9,7 +9,13 @@ Et Flappy Bird-inspirert spill der en norsk havørn flyr gjennom snødekt gransk
 - Treffer du et tre, faller ørnen ned i snøen og spillet er over. Da kan du spille på nytt eller dele scoren din.
 - Maks score er 100. Når du klarer det, flyr ørnen langt ut i vinteren, og du får meldingen «WOW, du er veldig flink! Men klarer du det igjen?».
 
-Rekorden din lagres i nettleseren (localStorage).
+## XP, level og skins
+
+- Du får 1 XP for hvert 3. tre du flyr forbi. Du starter på level 0, og maks level er 200 (level = total XP).
+- Med XP låser du opp nye skins til ørnen: Havørn (0), Kongeørn (20), Snøørn (40), Nattørn (70), Nordlysørn (100), Ildørn (140) og Gullørn (200).
+- Velg skin på startskjermen (der det står «Trykk for å flakse») med pilknappene eller venstre/høyre piltast. Låste skins vises som silhuett.
+
+XP, valgt skin og rekorden din lagres i nettleseren (localStorage).
 
 ## Slik kjører du det
 
@@ -44,6 +50,8 @@ Knappen «Del score» kopierer en ferdig tekst til utklippstavlen. Hvis nettlese
 | `GRAV`                | 0.38      | Tyngdekraft                                  |
 | `FLAP`                | -6.9      | Kraften i hvert vingeslag                    |
 | `GOAL`                | 100       | Antall trær du må passere for å vinne        |
+| `TREES_PER_XP`        | 3         | Antall trær per XP                           |
+| `MAX_XP`              | 200       | Maks level / maks XP                         |
 
 Hvor mye høyden på åpningen kan hoppe fra ett tre til neste, styres av tallet 230 i funksjonen `makeTree`. Farten øker i trinn: for hver 20. tre (20, 40, 60, 80) går ørnen raskere (`STEP_EVERY` og `STEP_BOOST`, startfart `BASE_SPEED`). Se `updatePlay`.
 

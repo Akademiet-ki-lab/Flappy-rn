@@ -15,7 +15,11 @@
     FLAP = -6.9,
     MAXFALL = 9.5,
     R = 11;
-  const KEY = "orneflukt-best";
+  const KEY = "orneflukt-best",
+    KEY_XP = "orneflukt-xp",
+    KEY_SKIN = "orneflukt-skin";
+  const MAX_XP = 200, // max level; level = total XP
+    TREES_PER_XP = 3; // 1 XP for every 3rd tree
   const reduce = !!(
     window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches
   );
@@ -71,6 +75,57 @@
   };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+  /* ---- skins: unlocked with XP (xp = XP needed) ---- */
+  const DEFAULT_PAL = {
+    eagle: C["--eagle"],
+    dark: C["--eagle-dark"],
+    belly: C["--eagle-belly"],
+    head: C["--eagle-head"],
+    tail: C["--tail"],
+    beak: C["--beak"],
+  };
+  const LOCKED_PAL = {
+    eagle: "#1d3049",
+    dark: "#14243a",
+    belly: "#27415f",
+    head: "#2a4566",
+    tail: "#2a4566",
+    beak: "#2a4566",
+  };
+  const SKINS = [
+    { name: "Havørn", xp: 0, c: DEFAULT_PAL },
+    {
+      name: "Kongeørn",
+      xp: 20,
+      c: { eagle: "#8a5a22", dark: "#4a2f10", belly: "#c89a52", head: "#e8b84a", tail: "#f0e6c8", beak: "#f2b632" },
+    },
+    {
+      name: "Snøørn",
+      xp: 40,
+      c: { eagle: "#cfd8e3", dark: "#7d8ea3", belly: "#f2f6fa", head: "#ffffff", tail: "#ffffff", beak: "#f2a03a" },
+    },
+    {
+      name: "Nattørn",
+      xp: 70,
+      c: { eagle: "#2b2f4a", dark: "#14172b", belly: "#4a5080", head: "#6c72b0", tail: "#9aa0d8", beak: "#ffd45e" },
+    },
+    {
+      name: "Nordlysørn",
+      xp: 100,
+      c: { eagle: "#1f8f72", dark: "#0f4a40", belly: "#7dffc0", head: "#c58bff", tail: "#7dffc0", beak: "#fff2a8" },
+    },
+    {
+      name: "Ildørn",
+      xp: 140,
+      c: { eagle: "#b8321f", dark: "#5c1209", belly: "#ff9a3c", head: "#ffd27a", tail: "#ff7a2e", beak: "#ffe14d" },
+    },
+    {
+      name: "Gullørn",
+      xp: 200,
+      c: { eagle: "#d4a017", dark: "#7a5a05", belly: "#fff0a0", head: "#fff7c8", tail: "#ffffff", beak: "#ff7a1a" },
+    },
+  ];
+
   /* ---- DOM ---- */
   const $ = (id) => document.getElementById(id);
   const stage = $("stage"),
@@ -83,6 +138,13 @@
     endTitle = $("endTitle"),
     endScore = $("endScore"),
     endBest = $("endBest");
+  const lvlEl = $("lvl"),
+    xpFill = $("xpFill"),
+    skinPrev = $("skinPrev"),
+    skinNext = $("skinNext"),
+    skinName = $("skinName"),
+    skinInfo = $("skinInfo"),
+    endXp = $("endXp");
   const againBtn = $("again"),
     shareBtn = $("share"),
     shareMsg = $("shareMsg"),
@@ -149,14 +211,74 @@
   let lastGapTop = 170,
     endShown = false,
     endAt = 0;
+  let xp = 0,
+    equipped = 0, // skin used in the game
+    skinIdx = 0, // skin shown in the menu
+    runXp = 0,
+    runUnlocked = [];
 
   try {
     best = parseInt(localStorage.getItem(KEY), 10) || 0;
+    xp = clamp(parseInt(localStorage.getItem(KEY_XP), 10) || 0, 0, MAX_XP);
+    equipped = parseInt(localStorage.getItem(KEY_SKIN), 10) || 0;
   } catch (e) {}
+  if (!(equipped >= 0 && equipped < SKINS.length) || SKINS[equipped].xp > xp)
+    equipped = 0;
+  skinIdx = equipped;
   function saveBest() {
     try {
       localStorage.setItem(KEY, String(best));
     } catch (e) {}
+  }
+  function saveProgress() {
+    try {
+      localStorage.setItem(KEY_XP, String(xp));
+      localStorage.setItem(KEY_SKIN, String(equipped));
+    } catch (e) {}
+  }
+  const isUnlocked = (i) => SKINS[i].xp <= xp;
+  function pal() {
+    return isUnlocked(skinIdx) ? SKINS[skinIdx].c : LOCKED_PAL;
+  }
+  function gainXp() {
+    if (xp >= MAX_XP) return;
+    const before = xp;
+    xp++;
+    runXp++;
+    SKINS.forEach((sk) => {
+      if (sk.xp > before && sk.xp <= xp) runUnlocked.push(sk.name);
+    });
+    saveProgress();
+  }
+  function updateMenu() {
+    const sk = SKINS[skinIdx];
+    lvlEl.textContent = "Level " + xp + " av " + MAX_XP;
+    const nextI = SKINS.findIndex((x) => x.xp > xp);
+    let from = 0,
+      to = MAX_XP;
+    if (nextI >= 0) {
+      from = SKINS[nextI - 1].xp;
+      to = SKINS[nextI].xp;
+    }
+    xpFill.style.width =
+      (to > from ? clamp(((xp - from) / (to - from)) * 100, 0, 100) : 100) +
+      "%";
+    skinName.textContent = isUnlocked(skinIdx) ? sk.name : "Låst skin";
+    skinInfo.textContent = isUnlocked(skinIdx)
+      ? skinIdx === equipped
+        ? nextI >= 0
+          ? "Neste skinn: " + SKINS[nextI].name + " ved level " + SKINS[nextI].xp
+          : "Alle skins er låst opp"
+        : sk.name
+      : "Låses opp ved level " + sk.xp;
+  }
+  function changeSkin(d) {
+    skinIdx = (skinIdx + d + SKINS.length) % SKINS.length;
+    if (isUnlocked(skinIdx)) {
+      equipped = skinIdx;
+      saveProgress();
+    }
+    updateMenu();
   }
 
   /* ---- scenery data ---- */
@@ -276,8 +398,14 @@
     intro.hidden = false;
     tapEl.textContent =
       best > 0 ? "Trykk for å prøve igjen" : "Trykk for å flakse";
+    skinIdx = equipped;
+    updateMenu();
   }
   function start() {
+    // a locked skin can only be previewed; play with the last unlocked one
+    if (!isUnlocked(skinIdx)) skinIdx = equipped;
+    runXp = 0;
+    runUnlocked = [];
     state = "play";
     intro.hidden = true;
     trees = [makeTree(W + 130)];
@@ -294,8 +422,8 @@
       shake = 10;
       flash = 0.5;
     }
-    puff(eagle.x, eagle.y, 10, C["--eagle-head"], 1.2, 0.03);
-    puff(eagle.x, eagle.y, 8, C["--eagle"], 1.2, 0.03);
+    puff(eagle.x, eagle.y, 10, pal().head, 1.2, 0.03);
+    puff(eagle.x, eagle.y, 8, pal().eagle, 1.2, 0.03);
   }
   function win() {
     state = "won";
@@ -323,6 +451,16 @@
         : newBest && score > 0
           ? "Ny rekord!"
           : "Rekord: " + best;
+    let xpText =
+      runXp > 0
+        ? "+" + runXp + " XP · Level " + xp
+        : "Ingen XP denne gangen. Du får 1 XP for hvert " +
+          TREES_PER_XP +
+          ". tre.";
+    if (xp >= MAX_XP) xpText = "Maks level (" + MAX_XP + ")! " + xpText;
+    if (runUnlocked.length)
+      xpText += " Nytt skin: " + runUnlocked.join(", ") + "!";
+    endXp.textContent = xpText;
     shareMsg.textContent = "";
     shareOut.hidden = true;
     endEl.hidden = false;
@@ -364,8 +502,17 @@
       e.preventDefault();
       if (e.repeat) return;
       action();
+    } else if (
+      (e.code === "ArrowLeft" || e.code === "ArrowRight") &&
+      state === "ready" &&
+      !endShown
+    ) {
+      e.preventDefault();
+      changeSkin(e.code === "ArrowLeft" ? -1 : 1);
     }
   });
+  skinPrev.addEventListener("click", () => changeSkin(-1));
+  skinNext.addEventListener("click", () => changeSkin(1));
   againBtn.addEventListener("click", restart);
   shareBtn.addEventListener("click", () => {
     const text =
@@ -501,6 +648,7 @@
         t.scored = true;
         score++;
         scorePop = 1;
+        if (score % TREES_PER_XP === 0) gainXp();
         if (score >= GOAL) {
           won = true;
           break;
@@ -813,6 +961,7 @@
     ctx.globalAlpha = 1;
   }
 
+  let P = DEFAULT_PAL;
   function wingShape(th, fill, shade) {
     ctx.save();
     ctx.translate(4, -3);
@@ -841,7 +990,7 @@
     ctx.strokeStyle = "rgba(0,0,0,.28)";
     ctx.stroke();
     if (!shade) {
-      ctx.fillStyle = C["--eagle"];
+      ctx.fillStyle = P.eagle;
       ctx.beginPath();
       ctx.ellipse(-8, -2, 11, 5, 0.05, 0, 6.283);
       ctx.fill();
@@ -850,6 +999,7 @@
   }
   function drawEagle() {
     const e = eagle;
+    P = pal();
     ctx.save();
     ctx.translate(e.x, e.y);
     ctx.rotate(e.rot);
@@ -862,9 +1012,9 @@
     else th = 0.2 + (0.25 + 0.75 * e.energy) * Math.sin(e.phase);
 
     // far wing
-    wingShape(th * 0.8 + 0.1, C["--eagle-dark"], "rgba(0,0,0,.28)");
+    wingShape(th * 0.8 + 0.1, P.dark, "rgba(0,0,0,.28)");
     // tail
-    ctx.fillStyle = C["--tail"];
+    ctx.fillStyle = P.tail;
     ctx.beginPath();
     ctx.moveTo(-11, -4);
     ctx.lineTo(-34, -7);
@@ -882,7 +1032,7 @@
     ctx.lineTo(-34, 4);
     ctx.stroke();
     // talons
-    ctx.strokeStyle = C["--beak"];
+    ctx.strokeStyle = P.beak;
     ctx.lineWidth = 2.4;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -892,16 +1042,16 @@
     ctx.lineTo(8, 15);
     ctx.stroke();
     // body
-    ctx.fillStyle = C["--eagle"];
+    ctx.fillStyle = P.eagle;
     ctx.beginPath();
     ctx.ellipse(-3, 2, 18, 10.5, 0.12, 0, 6.283);
     ctx.fill();
-    ctx.fillStyle = C["--eagle-belly"];
+    ctx.fillStyle = P.belly;
     ctx.beginPath();
     ctx.ellipse(-1, 6, 12, 4.8, 0.1, 0, 6.283);
     ctx.fill();
     // neck and head
-    ctx.fillStyle = C["--eagle-head"];
+    ctx.fillStyle = P.head;
     ctx.beginPath();
     ctx.ellipse(8, -2, 9, 7, -0.5, 0, 6.283);
     ctx.fill();
@@ -909,7 +1059,7 @@
     ctx.arc(13, -6, 8.2, 0, 6.283);
     ctx.fill();
     // beak
-    ctx.fillStyle = C["--beak"];
+    ctx.fillStyle = P.beak;
     ctx.beginPath();
     ctx.moveTo(18, -10);
     ctx.bezierCurveTo(25, -11, 31, -8, 31, -2);
@@ -929,14 +1079,14 @@
     ctx.beginPath();
     ctx.arc(17.1, -8.7, 0.7, 0, 6.283);
     ctx.fill();
-    ctx.strokeStyle = C["--eagle-dark"];
+    ctx.strokeStyle = P.dark;
     ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.moveTo(13, -12.4);
     ctx.lineTo(19.5, -9.6);
     ctx.stroke();
     // near wing
-    wingShape(th, C["--eagle-dark"], null);
+    wingShape(th, P.dark, null);
 
     ctx.restore();
   }

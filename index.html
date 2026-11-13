@@ -34,6 +34,32 @@
             <p>Klarer du alle 100?</p>
           </div>
           <div class="tap" id="tap">Trykk for å flakse</div>
+          <div class="skins" id="skins">
+            <div class="lvl" id="lvl"></div>
+            <div class="xpbar"><i id="xpFill"></i></div>
+            <div class="picker">
+              <button
+                class="arrow"
+                id="skinPrev"
+                type="button"
+                aria-label="Forrige skin"
+              >
+                &#8249;
+              </button>
+              <div class="skinname" aria-live="polite">
+                <strong id="skinName"></strong>
+                <small id="skinInfo"></small>
+              </div>
+              <button
+                class="arrow"
+                id="skinNext"
+                type="button"
+                aria-label="Neste skin"
+              >
+                &#8250;
+              </button>
+            </div>
+          </div>
         </div>
 
         <div
@@ -48,6 +74,7 @@
             <span id="endScore">0</span><small>av 100 trær</small>
           </div>
           <p class="best" id="endBest"></p>
+          <p class="xp" id="endXp"></p>
           <div class="actions">
             <button class="btn primary" id="again" type="button">
               Spill på nytt

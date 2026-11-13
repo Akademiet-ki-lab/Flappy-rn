@@ -121,6 +121,83 @@ canvas {
   background: rgba(14, 32, 54, 0.62);
   border: 1px solid rgba(245, 249, 252, 0.28);
 }
+/* Level, XP and skin picker on the start screen */
+.skins {
+  position: absolute;
+  left: 50%;
+  top: 72%;
+  transform: translateX(-50%);
+  width: 86%;
+  padding: 0.7em 0.8em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4em;
+  border-radius: 14px;
+  background: rgba(14, 32, 54, 0.62);
+  border: 1px solid rgba(245, 249, 252, 0.2);
+  text-shadow: 0 1px 6px rgba(14, 32, 54, 0.8);
+}
+.lvl {
+  font-family: var(--font-display);
+  font-size: 1.25em;
+  letter-spacing: 0.04em;
+}
+.xpbar {
+  width: 70%;
+  height: 0.5em;
+  border-radius: 999px;
+  background: rgba(14, 32, 54, 0.55);
+  overflow: hidden;
+}
+.xpbar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--aurora);
+}
+.picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  width: 100%;
+}
+.skinname {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  line-height: 1.25;
+}
+.skinname strong {
+  font-weight: 800;
+}
+.skinname small {
+  font-size: 0.8em;
+  opacity: 0.9;
+}
+.arrow {
+  pointer-events: auto;
+  flex: none;
+  width: 2em;
+  height: 2em;
+  padding: 0;
+  font: 800 1.4em/1 var(--font-body);
+  color: var(--ink);
+  background: rgba(245, 249, 252, 0.12);
+  border: 1px solid rgba(245, 249, 252, 0.35);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.arrow:hover {
+  background: rgba(245, 249, 252, 0.25);
+}
+.arrow:focus-visible {
+  outline: 3px solid var(--beak);
+  outline-offset: 2px;
+}
 @media (prefers-reduced-motion: no-preference) {
   .intro .tap {
     animation: pulse 1.8s ease-in-out infinite;
@@ -183,9 +260,18 @@ canvas {
   opacity: 0.8;
 }
 .end .best {
-  margin: 0 0 1.1em;
+  margin: 0 0 0.4em;
   opacity: 0.85;
   font-size: 0.95em;
+}
+.end .xp {
+  margin: 0 0 1.1em;
+  color: var(--aurora);
+  font-weight: 800;
+  font-size: 0.95em;
+}
+.end .xp:empty {
+  display: none;
 }
 .actions {
   display: flex;
